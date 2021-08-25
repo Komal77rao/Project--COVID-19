@@ -1,33 +1,71 @@
 -- CHECK IMPORTED DATA 
 SELECT * 
-FROM vaccinedata
-LIMIT 200;
-
+FROM vaccinedata;
 
 
 SELECT "STATE", 
-	count("MANUFACTURER") as total_Vax 
+	COUNT("MANUFACTURER") AS total_Vax 
 FROM vaccinedata
+WHERE "STATE" is not null
 GROUP BY "STATE"
 ORDER BY total_Vax DESC;
 
 
-SELECT "STATE", count("DIED") AS DIED
-FROM vaccinedata
-GROUP BY "STATE"
-ORDER BY DIED DESC;
-
-
-
--- GROUP BY MANUFACTURER, HIGHEST NUMBER OF PEOPLE DIED FROM MODERNA
+--Total deaths by vaccine
 
 SELECT "MANUFACTURER", 
-	count(*) as POPULATION, 
-	count("HOSPITAL") as HOSPITALIZED,
-	count("DIED") as DIED
+COUNT("DIED") AS deaths
+INTO TotalDeaths
 FROM vaccinedata
-GROUP BY "MANUFACTURER"  
-ORDER BY POPULATION DESC;
+WHERE "STATE" is not null
+GROUP BY "MANUFACTURER"
+ORDER BY deaths DESC;
+
+
+
+--SYMPOMS ONSET DATE
+
+SELECT "STATE",
+	"VAX_DATE",
+	"ONSET_DATE","NUMDAYS",
+	"DOSE",
+	"MANUFACTURER"
+INTO Numdays
+FROM vaccinedata
+WHERE "STATE" is not null
+ORDER BY "STATE", "VAX_DATE","NUMDAYS" ;
+
+
+--LIKELIHOOD OF DYING FROM VACCINATION
+
+WITH VaxVsDeaths ("STATE", died, vax_population)
+AS
+(
+SELECT "STATE",
+	COUNT("DIED") AS died, 
+	COUNT("ID") AS vax_population
+FROM vaccinedata
+WHERE "STATE" is not null
+GROUP BY "STATE"
+-- ORDER BY "STATE";
+)
+SELECT *, (died::decimal / vax_population::decimal)*100 AS PercentageDeaths
+FROM VaxVsDeaths
+ORDER BY vax_population DESC, PercentageDeaths DESC;
+
+
+-- ALTERNATIVE APPROACH
+
+SELECT "STATE","MANUFACTURER", 
+	COUNT(*) AS POPULATION, 
+	COUNT("HOSPITAL") AS HOSPITALIZED,
+	COUNT("DIED") AS DIED,
+	(COUNT("DIED")::decimal/COUNT(*)::decimal) * 100 AS percentageDeaths
+INTO StatewideDeaths
+FROM vaccinedata
+WHERE "STATE" is not null
+GROUP BY "STATE","MANUFACTURER"  
+ORDER BY "STATE",percentageDeaths DESC;
 
 
 
@@ -37,8 +75,33 @@ SELECT "SEX",
 	COUNT("HOSPITAL") AS HOSPITALISED,
 	COUNT("DIED") AS DIED
 FROM vaccinedata
+WHERE "STATE" is not null
 GROUP BY "SEX"
 ORDER BY DIED DESC;
 
+--GROUPING BY SYMPTOMS 
+
+
+SELECT "SYMPTOM1",
+	"SYMPTOM2",
+	"SYMPTOM3",
+	"MANUFACTURER", 
+	COUNT("ID") AS vax_population
+INTO Symptoms
+FROM vaccinedata
+WHERE "STATE" is not null
+GROUP BY "MANUFACTURER" ,"SYMPTOM1","SYMPTOM2","SYMPTOM3"
+ORDER BY "MANUFACTURER" ;
+
+--TOP SYMPTOMS
+
+SELECT "SYMPTOM1",
+	"SYMPTOM2",
+	"SYMPTOM3",
+	COUNT("ID") AS POP
+INTO TopSymptoms
+FROM vaccinedata
+GROUP BY "SYMPTOM1","SYMPTOM2","SYMPTOM3"
+ORDER BY POP DESC;
 
 
